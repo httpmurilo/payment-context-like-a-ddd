@@ -1,36 +1,42 @@
 using System.Collections.Generic;
 using System.Linq;
+using Flunt.Validations;
+using PaymentContext.Domain.ValueObjects;
+using PaymentContext.Shared.Entities;
 
 namespace PaymentContext.Domain.Entities
 {
-    public class Student
+    public class Student : Entity
     {
         private IList<Subscription> _subscriptions;
-        public Student(string firstNome, string lastName, string document, string email)
+        public Student(Name name, Document document, Email email)
         {
-            FirstNome = firstNome;
-            LastName = lastName;
+            Name = name;
             Document = document;
             Email = email;
             _subscriptions = new List<Subscription>();
+            AddNotifications(name, document, email);
         }
 
-        public string FirstNome { get; private set; }
-        public string LastName { get; private  set; }
-        public string Document { get; private  set; }
-        public string Email { get; private  set; }
+        public Name Name { get; private set; }
+        public Document Document { get; private set; }
+        public Email Email { get; private set; }
         public IReadOnlyCollection<Subscription> Subscriptions { get { return _subscriptions.ToArray(); } }
-        public string Address { get; set; }
+        public Address Address { get; set; }
 
         public void AddSubscription(Subscription subscription)
         {
-            //se ja tiver uma assinatura ativa, cancela
-            //cancela todas as outras assinatura e coloca essa como principal
-            foreach(var sub in Subscriptions)
+            var hasSubscriptionActive = false;
+            foreach(var sub in _subscriptions)
             {
-                sub.Inactivate();
+                    if(sub.Active)
+                    hasSubscriptionActive = true;
             }
-            _subscriptions.Add(subscription);
+
+            AddNotifications(new Contract()
+                .Requires()
+                .IsFalse(hasSubscriptionActive,"Student.Subscriptions","you already have a valid subscription")
+                .AreEquals(0,subscription.Payments.Count,"Student.Subscrption.Payment","invalid payment"));
         }
     }
 }
